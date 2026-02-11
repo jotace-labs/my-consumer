@@ -1,0 +1,29 @@
+name: Build Docker image
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Log in to ghcr.io
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and tag image    
+        run: |
+          TAG=$(echo $GITHUB_SHA | cut -c1-7)
+          docker build \
+             --build-arg GITHUB_TOKEN=${{ secrets.PAT }} \
+             --build-arg GITHUB_TOKEN_OWNER=${{ secrets.PAT_OWNER }} \
+             -t ghcr.io/${{ github.repository }}:$TAG .
+
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+  
+      - name: Push image to GHCR
+        run: docker push ghcr.io/${{ github.repository }}:${{ env.IMAGE_TAG }}
